@@ -1,5 +1,5 @@
 CC=erlc
-SOURCE=src/*.erl
+SOURCE=src/*.erl src/utils/*.erl
 TEST=test/*.erl
 OUTPUT=ebin
 .PHONY: test
