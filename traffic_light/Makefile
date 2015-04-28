@@ -16,4 +16,5 @@ clean:
 test:
 	$(CC) +export_all -o $(OUTPUT) $(SOURCE) $(TEST)
 	erl -noshell -pa $(OUTPUT) -eval "eunit:test(number, [verbose])" -s init stop
+	erl -noshell -pa $(OUTPUT) -eval "eunit:test(http_server, [verbose])" -s init stop
 

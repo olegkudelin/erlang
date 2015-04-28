@@ -57,6 +57,25 @@ handle_post(Sock, Path, GenServer) ->
   io:fwrite(PostBody),
   io:fwrite("\n").
 
+getDataFromRequest(color, PostBody) ->
+  case (re:run(PostBody, "'color':[^':]*'([^']*)", [{capture, [1], list}])) of
+    {match,[Color]} -> Color;
+    _ -> {error, {msg, "Incorrect body"}}
+  end;
+getDataFromRequest(observe_sections, PostBody) ->
+  case re:run(PostBody, "'numbers'[^']*'([01]*)[^01]*'([01]*)", [{capture, [1,2], list}]) of
+    {match,[NumberLeft, NumberRigth]} ->
+      N1 = list_to_integer(NumberLeft, 2),
+      N2 = list_to_integer(NumberRigth, 2),
+      [N1, N2];
+    _ -> {error, {msg, "Incorrect body"}}
+  end;
+getDataFromRequest(uuid, PostBody) ->
+  case (re:run(PostBody, "'sequence'[^']*'([^']*)", [{capture, [1], list}])) of
+    {match,[Uuid]} -> Uuid;
+    _ -> {error, {msg, "Incorrect body"}}
+  end.
+
 getResponseString({ok, {sequence, Uuid}}) ->
   io_lib:format("{'status': 'ok', 'response': {'sequence': '~p'}}", [Uuid]);
 getResponseString({ok, {start, ResultNumbers, ErrorSections}}) ->
