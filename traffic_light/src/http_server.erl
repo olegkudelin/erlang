@@ -41,19 +41,35 @@ handle_post(Sock, Path, GenServer) ->
   PostBody = get_body(Sock, Length),
   case Path of
     {abs_path,"/sequence/create"} ->
-      io:fwrite("/sequence/create"),
-      Seq = my_gen_server:sequence_create(GenServer),
-      io:fwrite("~p",[Seq]);
-    {abs_path,"/observation/add"} -> io:fwrite("/observation/add");
-    {abs_path,"/clear"} -> io:fwrite("/clear");
-    _ -> io:fwrite("Unsupported path ~p",[Path])
+      send_accept(Sock, getResponseString(my_gen_server:sequence_create(GenServer)));
+    {abs_path,"/observation/add"} ->
+%%       Uuid = GetUuidFromReq re:run(PostBody, "'sequence':.*'[^']*", [{capture, first, list}]),
+%%       JSONFormatBody = re:replace(PostBody, "x", "y", [global, {return, list}]),
+%%       JSON = mochijson2:decode(JSONFormatBody),
+      send_accept(Sock,""),
+      io:fwrite("/observation/add");
+    {abs_path,"/clear"} ->
+      send_accept(Sock, my_gen_server:clean(GenServer));
+    _ ->
+      send_accept(Sock, ""),
+      io:fwrite("Unsupported path ~p",[Path])
   end,
   io:fwrite(PostBody),
-  io:fwrite("\n"),
-  send_accept(Sock).
+  io:fwrite("\n").
 
-send_accept(Sock) ->
-  gen_tcp:send(Sock, "HTTP/1.1 202 Accepted\r\nConnection: close\r\nContent-Type: text/html;charset=UTF-8\r\nCache-Control:no-cashe\r\n\r\n"),
+getResponseString({ok, {sequence, Uuid}}) ->
+  io_lib:format("{'status': 'ok', 'response': {'sequence': '~p'}}", [Uuid]);
+getResponseString({ok, {start, ResultNumbers, ErrorSections}}) ->
+  io_lib:format("{'status': 'ok', 'response': {'start': ~p, 'missing': ~p}}", [ResultNumbers, ErrorSections]);
+getResponseString({ok,{msg, Text}}) ->
+  io_lib:format("{'status': 'ok', 'msg': ~p}", [Text]);
+getResponseString({error,{msg, ErrorText}}) ->
+  io_lib:format("{'status': 'error', 'msg': ~p}", [ErrorText]).
+
+
+send_accept(Sock, Mess) ->
+%%   gen_tcp:send(Sock, "HTTP/1.1 202 Accepted\r\nConnection: close\r\nContent-Type: text/html;charset=UTF-8\r\nCache-Control:no-cashe\r\n\r\n"),
+  gen_tcp:send(Sock, response(Mess)),
   gen_tcp:close(Sock).
 
 send_unsupported_error(Sock) ->

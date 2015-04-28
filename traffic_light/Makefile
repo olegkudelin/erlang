@@ -8,7 +8,7 @@ compile:
 	$(CC) -o $(OUTPUT) $(SOURCE)
 
 run:
-	erl -noshell -pa $(OUTPUT) -eval "http_server:start(8080)"
+	erl -noshell -pa $(OUTPUT) -eval "http_server:start(8888)"
 
 clean:
 	rm -rf $(OUTPUT)/*.beam

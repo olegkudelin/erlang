@@ -74,7 +74,7 @@ server(State) ->
 
     {clean, From, Ref} ->
       NewState = [],
-      From ! {reply, Ref, {ok}},
+      From ! {reply, Ref, {ok, {msg, "Clean sequence"}}},
       ?MODULE:server(NewState);
 
     {stop, From, Ref} ->
@@ -94,14 +94,14 @@ prepareOutputResult([], [_ | []]) ->
 prepareOutputResult([], [LastObsevation | PrevObsevations]) ->
   {sequence, _, {start, _, ErrorSections}} = LastObsevation,
   ResultNumber = length(PrevObsevations),
-  {start, [ResultNumber], ErrorSections};
+  {ok, {start, [ResultNumber], ErrorSections}};
 prepareOutputResult(CalculationResult, PrevObsevations) ->
   {start, ResultPossibleNumbers, ErrorSections} = CalculationResult,
   if
     length(ResultPossibleNumbers) > 0 ->
       IncreaseNumber = length(PrevObsevations) - 1,
       ResultNumbers = [Number + IncreaseNumber || Number <- ResultPossibleNumbers],
-      {start, ResultNumbers, ErrorSections};
+      {ok, {start, ResultNumbers, ErrorSections}};
     length(ResultPossibleNumbers) < 1 -> {error,{msg, "Result not found. Error sequence?"}}
   end.
 
