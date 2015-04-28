@@ -1,18 +1,31 @@
+%%%-------------------------------------------------------------------
+%%% @author Kudelin Oleg
+%%% @copyright (C) 2015, <COMPANY>
+%%% @doc
+%%% Gen сервер, хранит сессии и результаты их наблюдений
+%%% @end
+%%% Created : 17. апр 2015 22:17
+%%%-------------------------------------------------------------------
+
 -module(my_gen_server).
 
 -export([start/0, server/1, sequence_create/1, observation_add/4, show_all_sequence/1, stop/1, clean/1, get_session/1]).
 
+%% Стартует сервер
 start() -> 
 	io:format("Starting session server from ~p~n", [self()]),
 	InitialState = [],
 	spawn(?MODULE, server, [InitialState]).
 
+%% Создает новую сессию и возвращет ее идентификатор
 sequence_create(Pid) ->
 	call(Pid, create).
 
 get_session(Pid) ->
   call(Pid, list).
 
+%% Добавляет и общитывает новое наблюдение
+%% возвращает результаты расчетов
 observation_add(Pid, Uuid, green, ObserveSections) ->
   call(Pid, {observation_add, {sequence, Uuid, color, green, numbers, ObserveSections}});
 observation_add(Pid, Uuid, red, []) ->

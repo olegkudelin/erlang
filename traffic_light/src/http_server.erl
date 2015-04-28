@@ -2,7 +2,8 @@
 %%% @author oleg
 %%% @copyright (C) 2015, <COMPANY>
 %%% @doc
-%%%
+%%% Веб-сервер
+%%% принимает запросы и передает их gen серверу, возвращет результат его работы
 %%% @end
 %%% Created : 25. апр 2015 0:00
 %%%-------------------------------------------------------------------
@@ -22,12 +23,14 @@ loop(Sock, GenServer) ->
   spawn(?MODULE, handle_request, [Conn, GenServer]),
   ?MODULE:loop(Sock, GenServer).
 
+%% определяет из заголовка длинну тела сообщения
 get_content_length(Sock) ->
   case gen_tcp:recv(Sock, 0, 60000) of
     {ok, {http_header, _, 'Content-Length', _, Length}} -> list_to_integer(Length);
     {ok, {http_header, _, Header, _, _}} -> get_content_length(Sock)
   end.
 
+%% возвращает тело сообщения
 get_body(Sock, Length) ->
   case gen_tcp:recv(Sock, 0) of
     {ok, http_eoh} -> inet:setopts(Sock, [{packet, raw}]),
@@ -36,6 +39,7 @@ get_body(Sock, Length) ->
     _ -> get_body(Sock, Length)
   end.
 
+%% обеспечивает взаимодействие с gen-сервером
 handle_post(Sock, Path, GenServer) ->
   Length = get_content_length(Sock),
   PostBody = get_body(Sock, Length),
@@ -60,6 +64,8 @@ handle_post(Sock, Path, GenServer) ->
       io:fwrite("Unsupported path ~p",[Path])
   end.
 
+%% Возврашает нужные поля из тела сообщения
+%% цвет, наблюдаемые значения и uuid
 getDataFromRequest(color, PostBody) ->
   case (re:run(PostBody, "'color':[^':]*'([^']*)", [{capture, [1], list}])) of
     {match,[Color]} -> Color;
@@ -79,6 +85,7 @@ getDataFromRequest(uuid, PostBody) ->
     _ -> {error, {msg, "Incorrect body"}}
   end.
 
+%% Формирует тело отвера с результатами работы gen-сервера
 getResponseString({ok, {sequence, Uuid}}) ->
   io_lib:format("{'status': 'ok', 'response': {'sequence': '~s'}}", [Uuid]);
 getResponseString({ok, {start, ResultNumbers, ErrorSections}}) ->
