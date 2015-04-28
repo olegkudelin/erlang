@@ -1,6 +1,6 @@
 -module(my_gen_server).
 
--export([start/0, server/1, sequence_create/1, observation_add/2, show_all_sequence/1, stop/1, clean/1, get_session/1]).
+-export([start/0, server/1, sequence_create/1, observation_add/4, show_all_sequence/1, stop/1, clean/1, get_session/1]).
 
 start() -> 
 	io:format("Starting session server from ~p~n", [self()]),
@@ -13,8 +13,10 @@ sequence_create(Pid) ->
 get_session(Pid) ->
   call(Pid, list).
 
-observation_add(Pid, User) ->
-  call(Pid, User).
+observation_add(Pid, Uuid, green, ObserveSections) ->
+  call(Pid, {observation_add, {sequence, Uuid, color, green, numbers, ObserveSections}});
+observation_add(Pid, Uuid, red, []) ->
+  call(Pid, {observation_add, {sequence, Uuid, color, red}}).
 
 show_all_sequence(Pid) ->
   call(Pid, show_all_sequence).
@@ -49,7 +51,7 @@ server(State) ->
 			?MODULE:server(NewState);
 
 
-		{{observation_add, {color, "green", numbers, Observation_message}, sequence, Uuid}, From, Ref} ->
+		{{observation_add, {sequence, Uuid, color, green, numbers, Observation_message}}, From, Ref} ->
       [FirstNumber, SecondNumber] = Observation_message,
       PrevObsevations = getPrevObsevations(Uuid, State),
       if
@@ -58,12 +60,12 @@ server(State) ->
           ?MODULE:server(State);
         true ->
           [{sequence, _,{start, PossibleNumbers, {missing, ErrorSections}}} | _] = PrevObsevations,
-          CalculationResult = number:calculatePossibleNumbers(list_to_integer(FirstNumber,2), list_to_integer(SecondNumber,2), PossibleNumbers, ErrorSections),
+          CalculationResult = number:calculatePossibleNumbers(FirstNumber, SecondNumber, PossibleNumbers, ErrorSections),
           From ! {reply, Ref, prepareOutputResult(CalculationResult, PrevObsevations)},
           ?MODULE:server([{sequence, Uuid, CalculationResult} | State])
       end;
 
-    {{observation_add, {color, "red"}, sequence, Uuid}, From, Ref} ->
+    {{observation_add, {sequence, Uuid, color, red}}, From, Ref} ->
       PrevObsevations = getPrevObsevations(Uuid, State),
       From ! {reply, Ref, prepareOutputResult([], PrevObsevations)},
       my_gen_server:server(State);

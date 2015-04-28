@@ -43,19 +43,22 @@ handle_post(Sock, Path, GenServer) ->
     {abs_path,"/sequence/create"} ->
       send_accept(Sock, getResponseString(my_gen_server:sequence_create(GenServer)));
     {abs_path,"/observation/add"} ->
-%%       Uuid = GetUuidFromReq re:run(PostBody, "'sequence':.*'[^']*", [{capture, first, list}]),
-%%       JSONFormatBody = re:replace(PostBody, "x", "y", [global, {return, list}]),
-%%       JSON = mochijson2:decode(JSONFormatBody),
-      send_accept(Sock,""),
-      io:fwrite("/observation/add");
+      Uuid = getDataFromRequest(uuid, PostBody),
+      case getDataFromRequest(color, PostBody) of
+        "green" ->
+          ObserveSections = getDataFromRequest(observe_sections, PostBody),
+          send_accept(Sock, getResponseString(my_gen_server:observation_add(GenServer, Uuid, green, ObserveSections)));
+        "red" ->
+          send_accept(Sock, getResponseString(my_gen_server:observation_add(GenServer, Uuid, red, [])));
+        _ ->
+          send_accept(Sock, getResponseString({error,{msg, "Undefind color, possible green or red"}}))
+      end;
     {abs_path,"/clear"} ->
       send_accept(Sock, my_gen_server:clean(GenServer));
     _ ->
       send_accept(Sock, ""),
       io:fwrite("Unsupported path ~p",[Path])
-  end,
-  io:fwrite(PostBody),
-  io:fwrite("\n").
+  end.
 
 getDataFromRequest(color, PostBody) ->
   case (re:run(PostBody, "'color':[^':]*'([^']*)", [{capture, [1], list}])) of
@@ -77,17 +80,17 @@ getDataFromRequest(uuid, PostBody) ->
   end.
 
 getResponseString({ok, {sequence, Uuid}}) ->
-  io_lib:format("{'status': 'ok', 'response': {'sequence': '~p'}}", [Uuid]);
+  io_lib:format("{'status': 'ok', 'response': {'sequence': '~s'}}", [Uuid]);
 getResponseString({ok, {start, ResultNumbers, ErrorSections}}) ->
-  io_lib:format("{'status': 'ok', 'response': {'start': ~p, 'missing': ~p}}", [ResultNumbers, ErrorSections]);
+  [NumberLeft, NumberRigth] = ErrorSections,
+  io_lib:format("{'status': 'ok', 'response': {'start': ~p, 'missing': ['~.2B', '~.2B']}}", [ResultNumbers, NumberLeft, NumberRigth]);
 getResponseString({ok,{msg, Text}}) ->
-  io_lib:format("{'status': 'ok', 'msg': ~p}", [Text]);
+  io_lib:format("{'status': 'ok', 'msg': ~s}", [Text]);
 getResponseString({error,{msg, ErrorText}}) ->
-  io_lib:format("{'status': 'error', 'msg': ~p}", [ErrorText]).
+  io_lib:format("{'status': 'error', 'msg': ~s}", [ErrorText]).
 
 
 send_accept(Sock, Mess) ->
-%%   gen_tcp:send(Sock, "HTTP/1.1 202 Accepted\r\nConnection: close\r\nContent-Type: text/html;charset=UTF-8\r\nCache-Control:no-cashe\r\n\r\n"),
   gen_tcp:send(Sock, response(Mess)),
   gen_tcp:close(Sock).
 

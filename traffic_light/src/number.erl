@@ -25,7 +25,7 @@ calculatePossibleNumbers(LeftSections, RigthSections, [], []) ->
   RigthPossibleNumbers = getPossibleNumber(RigthSections, getNumbersWithPattern()),
   LeftMissingSection = findMissingSection(LeftSections, LeftPossibleNumbers, 0),
   RigthMissingSection = findMissingSection(RigthSections, RigthPossibleNumbers, 0),
-  {start, buildNumbersFromSection(LeftPossibleNumbers, RigthPossibleNumbers), {missing, [LeftMissingSection, RigthMissingSection]}};
+  {start, buildNumbersFromSection(LeftPossibleNumbers, RigthPossibleNumbers), [LeftMissingSection, RigthMissingSection]};
 calculatePossibleNumbers(LeftSections, RigthSections, PrefResultNumbers, ErrorSections) ->
   Seq = [Number - 1 || Number <- PrefResultNumbers],
   {LeftWaitingNumbers, RigthWaitingNumbers} = splitIntegerNumberBySection(Seq),
@@ -35,7 +35,7 @@ calculatePossibleNumbers(LeftSections, RigthSections, PrefResultNumbers, ErrorSe
   LeftMissingSectionNew = findMissingSection(LeftSections, LeftPossibleNumbers, LeftMissingSection),
   RigthErrorSectionNew = findMissingSection(RigthSections, RigthPossibleNumbers, RigthErrorSection),
   PossibleNumbers = buildNumbersFromSection(LeftPossibleNumbers, RigthPossibleNumbers),
-  {start, filterByWaitigSeq(PossibleNumbers, Seq), {missing, [LeftMissingSectionNew, RigthErrorSectionNew]}}.
+  {start, filterByWaitigSeq(PossibleNumbers, Seq), [LeftMissingSectionNew, RigthErrorSectionNew]}.
 
 filterByWaitigSeq(PossibleNumbers, Seq) ->
   [N1 || N1 <- PossibleNumbers, N2 <- Seq, N1 == N2].

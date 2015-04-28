@@ -34,5 +34,3 @@ filterNumbersWithPattern_test() ->
     [1,5,9]),
   ?assertEqual(NumbersWithPattern, [{1,  2#0010010}, {5, 2#1101011}, {9, 2#1111011}]).
 
-%% getPossibleNumber_test() ->
-%%   number:getPossibleNumber()
