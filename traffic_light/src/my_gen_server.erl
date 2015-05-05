@@ -80,8 +80,14 @@ server(State) ->
 
     {{observation_add, {sequence, Uuid, color, red}}, From, Ref} ->
       PrevObsevations = getPrevObsevations(Uuid, State),
-      From ! {reply, Ref, prepareOutputResult([], PrevObsevations)},
-      my_gen_server:server(State);
+      if
+        length(PrevObsevations) == 0 ->
+          From ! {reply, Ref, {error, {msg, "The sequence isn't found"}}},
+          ?MODULE:server(State);
+        true ->
+          From ! {reply, Ref, prepareOutputResult([], PrevObsevations)},
+          ?MODULE:server(State)
+      end;
 
     {show_all_sequence, From, Ref} ->
       From ! {reply, Ref, State},
@@ -104,19 +110,21 @@ getPrevObsevations(Uuid, State) ->
   lists:filter(fun({sequence, Uuid_loop, _}) ->
     Uuid == Uuid_loop end, State).
 
+prepareOutputResult([], []) ->
+  {error,{msg, "Result not found. Error sequence?"}};
 prepareOutputResult([], [_ | []]) ->
   {error,{msg, "There isn't enough data"}};
 prepareOutputResult([], [LastObsevation | PrevObsevations]) ->
-  {sequence, _, {start, _, ErrorSections}} = LastObsevation,
+  {sequence, _, {start, _, {missing, ErrorSections}}} = LastObsevation,
   ResultNumber = length(PrevObsevations),
-  {ok, {start, [ResultNumber], ErrorSections}};
+  {ok, {start, [ResultNumber], {missing, ErrorSections}}};
 prepareOutputResult(CalculationResult, PrevObsevations) ->
-  {start, ResultPossibleNumbers, ErrorSections} = CalculationResult,
+  {start, ResultPossibleNumbers, {missing, ErrorSections}} = CalculationResult,
   if
     length(ResultPossibleNumbers) > 0 ->
       IncreaseNumber = length(PrevObsevations) - 1,
       ResultNumbers = [Number + IncreaseNumber || Number <- ResultPossibleNumbers],
-      {ok, {start, ResultNumbers, ErrorSections}};
+      {ok, {start, ResultNumbers, {missing, ErrorSections}}};
     length(ResultPossibleNumbers) < 1 -> {error,{msg, "Result not found. Error sequence?"}}
   end.
 

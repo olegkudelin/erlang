@@ -88,7 +88,7 @@ getDataFromRequest(uuid, PostBody) ->
 %% Формирует тело отвера с результатами работы gen-сервера
 getResponseString({ok, {sequence, Uuid}}) ->
   io_lib:format("{'status': 'ok', 'response': {'sequence': '~s'}}", [Uuid]);
-getResponseString({ok, {start, ResultNumbers, ErrorSections}}) ->
+getResponseString({ok, {start, ResultNumbers, {missing, ErrorSections}}}) ->
   [NumberLeft, NumberRigth] = ErrorSections,
   io_lib:format("{'status': 'ok', 'response': {'start': ~p, 'missing': ['~.2B', '~.2B']}}", [ResultNumbers, NumberLeft, NumberRigth]);
 getResponseString({ok,{msg, Text}}) ->
