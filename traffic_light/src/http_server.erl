@@ -87,15 +87,19 @@ getDataFromRequest(uuid, PostBody) ->
 
 %% Формирует тело отвера с результатами работы gen-сервера
 getResponseString({ok, {sequence, Uuid}}) ->
-  io_lib:format("{'status': 'ok', 'response': {'sequence': '~s'}}", [Uuid]);
+  io_lib:format("{'status': 'ok', 'response': {'sequence': '~s'}}~n", [Uuid]);
 getResponseString({ok, {start, ResultNumbers, {missing, ErrorSections}}}) ->
   [NumberLeft, NumberRigth] = ErrorSections,
-  io_lib:format("{'status': 'ok', 'response': {'start': ~p, 'missing': ['~.2B', '~.2B']}}", [ResultNumbers, NumberLeft, NumberRigth]);
+  NumberLeftString = convertIntegerToBitString(NumberLeft),
+  NumberRigthString = convertIntegerToBitString(NumberRigth),
+  io_lib:format("{'status': 'ok', 'response': {'start': ~p, 'missing': ['~s', '~s']}}~n", [ResultNumbers, NumberLeftString, NumberRigthString]);
 getResponseString({ok,{msg, Text}}) ->
-  io_lib:format("{'status': 'ok', 'msg': ~s}", [Text]);
+  io_lib:format("{'status': 'ok', 'msg': ~s}~n", [Text]);
 getResponseString({error,{msg, ErrorText}}) ->
-  io_lib:format("{'status': 'error', 'msg': ~s}", [ErrorText]).
+  io_lib:format("{'status': 'error', 'msg': ~s}~n", [ErrorText]).
 
+convertIntegerToBitString(Number) ->
+  lists:flatten(io_lib:format("~7..0s", [lists:flatten(io_lib:format("~.2B", [Number]))])).
 
 send_accept(Sock, Mess) ->
   gen_tcp:send(Sock, response(Mess)),

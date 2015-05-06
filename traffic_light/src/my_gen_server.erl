@@ -128,7 +128,8 @@ prepareOutputResult(Observation_message, PrevObsevations) ->
       IncreaseNumber = length(PrevObsevations) - 1,
       ResultNumbers = [Number + IncreaseNumber || Number <- ResultPossibleNumbers],
       {ok, {start, ResultNumbers, {missing, NewErrorSections}}};
-    length(ResultPossibleNumbers) < 1 -> {error,{msg, "Result not found. Error sequence?"}}
+    length(ResultPossibleNumbers) < 1 ->
+      {error,{msg, "Result not found. Error sequence?"}}
   end.
 
 
