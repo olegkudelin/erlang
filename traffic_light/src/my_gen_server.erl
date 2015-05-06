@@ -65,29 +65,27 @@ server(State) ->
 
 
 		{{observation_add, {sequence, Uuid, color, green, numbers, Observation_message}}, From, Ref} ->
-      [FirstNumber, SecondNumber] = Observation_message,
-      PrevObsevations = getPrevObsevations(Uuid, State),
-      if
-        length(PrevObsevations) == 0 ->
-          From ! {reply, Ref, {error, {msg, "The sequence isn't found"}}},
+      Result = prepareOutputResult(Observation_message, getPrevObsevations(Uuid, State)),
+      case Result of
+        {error, _} ->
+          From ! {reply, Ref, Result},
           ?MODULE:server(State);
-        true ->
-          [{sequence, _,{start, PossibleNumbers, {missing, ErrorSections}}} | _] = PrevObsevations,
-          CalculationResult = number:calculatePossibleNumbers(FirstNumber, SecondNumber, PossibleNumbers, ErrorSections),
-          From ! {reply, Ref, prepareOutputResult(CalculationResult, PrevObsevations)},
+        {ok, CalculationResult} ->
+          From ! {reply, Ref, Result},
           ?MODULE:server([{sequence, Uuid, CalculationResult} | State])
       end;
 
     {{observation_add, {sequence, Uuid, color, red}}, From, Ref} ->
-      PrevObsevations = getPrevObsevations(Uuid, State),
-      if
-        length(PrevObsevations) == 0 ->
-          From ! {reply, Ref, {error, {msg, "The sequence isn't found"}}},
+      Result = prepareOutputResult([], getPrevObsevations(Uuid, State)),
+      case Result of
+        {error, _} ->
+          From ! {reply, Ref, Result},
           ?MODULE:server(State);
-        true ->
-          From ! {reply, Ref, prepareOutputResult([], PrevObsevations)},
-          ?MODULE:server(State)
+        _ ->
+          From ! {reply, Ref, Result},
+          ?MODULE:server([{sequence, Uuid, stop} | State])
       end;
+
 
     {show_all_sequence, From, Ref} ->
       From ! {reply, Ref, State},
@@ -110,21 +108,26 @@ getPrevObsevations(Uuid, State) ->
   lists:filter(fun({sequence, Uuid_loop, _}) ->
     Uuid == Uuid_loop end, State).
 
-prepareOutputResult([], []) ->
-  {error,{msg, "Result not found. Error sequence?"}};
+prepareOutputResult(_, []) ->
+  {error,{msg, "The sequence isn't found"}};
+prepareOutputResult(_, [{sequence, _, stop} | _]) ->
+  {error,{msg, "The red observation should be the last"}};
 prepareOutputResult([], [_ | []]) ->
   {error,{msg, "There isn't enough data"}};
 prepareOutputResult([], [LastObsevation | PrevObsevations]) ->
   {sequence, _, {start, _, {missing, ErrorSections}}} = LastObsevation,
   ResultNumber = length(PrevObsevations),
   {ok, {start, [ResultNumber], {missing, ErrorSections}}};
-prepareOutputResult(CalculationResult, PrevObsevations) ->
-  {start, ResultPossibleNumbers, {missing, ErrorSections}} = CalculationResult,
+prepareOutputResult(Observation_message, PrevObsevations) ->
+  [FirstNumber, SecondNumber] = Observation_message,
+  [{sequence, _,{start, PossibleNumbers, {missing, ErrorSections}}} | _] = PrevObsevations,
+  CalculationResult = number:calculatePossibleNumbers(FirstNumber, SecondNumber, PossibleNumbers, ErrorSections),
+  {start, ResultPossibleNumbers, {missing, NewErrorSections}} = CalculationResult,
   if
     length(ResultPossibleNumbers) > 0 ->
       IncreaseNumber = length(PrevObsevations) - 1,
       ResultNumbers = [Number + IncreaseNumber || Number <- ResultPossibleNumbers],
-      {ok, {start, ResultNumbers, {missing, ErrorSections}}};
+      {ok, {start, ResultNumbers, {missing, NewErrorSections}}};
     length(ResultPossibleNumbers) < 1 -> {error,{msg, "Result not found. Error sequence?"}}
   end.
 
