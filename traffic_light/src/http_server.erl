@@ -58,7 +58,7 @@ handle_post(Sock, Path, GenServer) ->
           send_accept(Sock, getResponseString({error,{msg, "Undefind color, possible green or red"}}))
       end;
     {abs_path,"/clear"} ->
-      send_accept(Sock, my_gen_server:clean(GenServer));
+      send_accept(Sock, getResponseString(my_gen_server:clean(GenServer)));
     _ ->
       send_accept(Sock, ""),
       io:fwrite("Unsupported path ~p",[Path])
