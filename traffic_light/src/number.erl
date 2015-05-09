@@ -13,7 +13,7 @@
 -author("oleg").
 
 %% API
--export([calculatePossibleNumbers/4]).
+-export([calculatePossibleNumbers/4, convertIntegerToBitString/1]).
 
 -compile(export_all).
 
@@ -79,3 +79,8 @@ findMissingSection(NumPattern, PossibleNumbers, OldMissingSection) ->
   MaibeErrorSection = WorkingSection bxor MinimumMaibeWorkSection,
   ErrorSection = MaibeErrorSection bor OldMissingSection,
   ErrorSection.
+
+convertIntegerToBitString(Number) ->
+  lists:flatten(io_lib:format("~7..0s", [lists:flatten(io_lib:format("~.2B", [Number]))])).
+
+
