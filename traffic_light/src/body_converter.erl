@@ -12,8 +12,8 @@
 %% API
 -export([parseRequestBody/1, getResponseString/1]).
 
-%% Возврашает нужные поля из тела сообщения
-%% цвет, наблюдаемые значения и uuid
+%% Возврашает ожидаемые поля из тела сообщения:
+%% цвет, наблюдаемые значения и uuid или ошбку если их нет или задан неверный формат
 parseRequestBody(Body) ->
   case rfc4627:decode(Body) of
     {ok, Json, _} ->
@@ -29,7 +29,8 @@ parseRequestBody(Body) ->
         not_found ->
           {error, "Cannot get Uuid"}
       end;
-    not_found -> {error, "Cannot parse Json"}
+    {error, _} ->
+      {error, "Error parse JSON"}
   end.
 
 get_observe_number_field(Observation, Uuid) ->
@@ -40,16 +41,20 @@ get_observe_number_field(Observation, Uuid) ->
           N1 = binary_to_integer(Number1, 2),
           N2 = binary_to_integer(Number2, 2),
           {ok, green, Uuid, [N1, N2]};
+        {ok, Number} ->
+          {error, io_lib:format("Bad observation ~s~n", [Number])};
         not_found ->
           {error, "Cannot get number"}
       end;
     {ok, <<"red">>} ->
       {ok, red, Uuid};
+    {ok, Color} ->
+      {error, io_lib:format("Unsupported color: ~s~n", [Color])};
     not_found ->
       {error, "Cannot get color"}
   end.
 
-%% Формирует тело отвера с результатами работы gen-сервера
+%% Формирует тело ответа с результатами работы в формате JSON
 getResponseString({ok, {sequence, Uuid}}) ->
   rfc4627:encode({obj,[{status, ok}, {response, {obj, [{sequence, list_to_bitstring(Uuid)}]} }]});
 getResponseString({ok, {start, ResultNumbers, {missing, ErrorSections}}}) ->
