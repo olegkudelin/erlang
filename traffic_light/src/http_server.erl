@@ -83,4 +83,4 @@ handle_request(Sock, GenServer) ->
 
 response_ok(Str) ->
   B = iolist_to_binary(Str),
-  iolist_to_binary(io_lib:fwrite("HTTP/1.0 200 OK\nContent-Type: application/json\nContent-Length: ~p\n\n~s",[size(B), B])).
+  iolist_to_binary(io_lib:fwrite("HTTP/1.0 200 OK\nContent-Type: application/json\nContent-Length: ~p\n\n~s\n",[size(B)+1, B])).

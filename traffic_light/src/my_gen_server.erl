@@ -11,11 +11,12 @@
 
 -export([start/0, server/1, sequence_create/1, observation_add/4, show_all_sequence/1, stop/1, clean/1, get_session/1]).
 
+-record(state, {session}).
+
 %% Стартует сервер
-start() -> 
-	io:format("Starting session server from ~p~n", [self()]),
-	InitialState = [],
-	spawn(?MODULE, server, [InitialState]).
+start() ->
+  Dict = dict:new(),
+  spawn(?MODULE, server, [Dict]).
 
 %% Создает новую сессию и возвращет ее идентификатор
 sequence_create(Pid) ->
@@ -41,49 +42,62 @@ stop(Pid) ->
   call(Pid, stop).
 
 call(Pid, Msg) ->
-	Monitor = erlang:monitor(process, Pid), 
-          Pid ! {Msg, self(), Monitor},
-          receive
-                {reply, Monitor, Replay} -> 
-			erlang:demonitor(Monitor, [flush]),
-			Replay;
-		{'DOWN', Monitor, _, _, ErrorReason} -> 
-			{error, ErrorReason}
-          	after 500 -> 
-			erlang:demonitor(Monitor, [flush]),
-			no_reply
-          end.
+  Monitor = erlang:monitor(process, Pid),
+  Pid ! {Msg, self(), Monitor},
+  receive
+    {reply, Monitor, Replay} ->
+      erlang:demonitor(Monitor, [flush]),
+      Replay;
+    {'DOWN', Monitor, _, _, ErrorReason} ->
+      {error, ErrorReason}
+  after 500 ->
+    erlang:demonitor(Monitor, [flush]),
+    no_reply
+  end.
 
 server(State) ->
 	receive
 		{create, From, Ref} ->
       Uuid = uuid:to_string(uuid:v4()),
-      NewClient = {sequence, Uuid, {start, [], {missing, []}}},
-      NewState = [NewClient | State],
       From ! {reply, Ref, {ok, {sequence, Uuid}}},
-			?MODULE:server(NewState);
+      io:format("dist ~p~n", [State]),
+      ?MODULE:server(dict:store(Uuid, [], State));
 
 
 		{{observation_add, {sequence, Uuid, color, green, numbers, Observation_message}}, From, Ref} ->
-      Result = prepareOutputResult(Observation_message, getPrevObsevations(Uuid, State)),
-      case Result of
-        {error, _} ->
-          From ! {reply, Ref, Result},
-          ?MODULE:server(State);
-        {ok, CalculationResult} ->
-          From ! {reply, Ref, Result},
-          ?MODULE:server([{sequence, Uuid, CalculationResult} | State])
+      case dict:find(Uuid, State) of
+        {ok, PrevObservations} ->
+          io:format("Sequense fount ok ~p~n", [State]),
+          Result = prepareOutputResult(Observation_message, PrevObservations),
+          case Result of
+            {error, _} ->
+              From ! {reply, Ref, Result},
+              ?MODULE:server(State);
+            {ok, CalculationResult} ->
+              From ! {reply, Ref, Result},
+              ?MODULE:server(dict:store(Uuid, [CalculationResult | PrevObservations], State))
+          end;
+        error ->
+          io:format("Sequense found error ~p~n", [State]),
+          From ! {reply, Ref, {error,{msg, "The sequence isn't found"}}},
+          ?MODULE:server(State)
       end;
 
     {{observation_add, {sequence, Uuid, color, red}}, From, Ref} ->
-      Result = prepareOutputResult([], getPrevObsevations(Uuid, State)),
-      case Result of
-        {error, _} ->
-          From ! {reply, Ref, Result},
-          ?MODULE:server(State);
-        _ ->
-          From ! {reply, Ref, Result},
-          ?MODULE:server([{sequence, Uuid, stop} | State])
+      case dict:find(Uuid, State) of
+        {ok, PrevObservations} ->
+          Result = prepareOutputResult([], PrevObservations),
+          case Result of
+            {error, _} ->
+              From ! {reply, Ref, Result},
+              ?MODULE:server(State);
+            _ ->
+              From ! {reply, Ref, Result},
+              ?MODULE:server(dict:store(Uuid, [stop | PrevObservations], State))
+          end;
+        error ->
+          From ! {reply, Ref, {error, {msg, "The sequence isn't found"}}},
+          ?MODULE:server(State)
       end;
 
 
@@ -92,9 +106,8 @@ server(State) ->
       ?MODULE:server(State);
 
     {clean, From, Ref} ->
-      NewState = [],
       From ! {reply, Ref, {ok, {msg, "Clean sequence"}}},
-      ?MODULE:server(NewState);
+      ?MODULE:server(dict:new());
 
     {stop, From, Ref} ->
       From ! {reply, Ref, {ok}};
@@ -104,28 +117,27 @@ server(State) ->
 
 	end.
 
-getPrevObsevations(Uuid, State) ->
-  lists:filter(fun({sequence, Uuid_loop, _}) ->
-    Uuid == Uuid_loop end, State).
-
-prepareOutputResult(_, []) ->
-  {error,{msg, "The sequence isn't found"}};
-prepareOutputResult(_, [{sequence, _, stop} | _]) ->
+prepareOutputResult(_, [stop | _]) ->
   {error,{msg, "The red observation should be the last"}};
 prepareOutputResult([], [_ | []]) ->
   {error,{msg, "There isn't enough data"}};
 prepareOutputResult([], [LastObsevation | PrevObsevations]) ->
-  {sequence, _, {start, _, {missing, ErrorSections}}} = LastObsevation,
+  {start, _, {missing, ErrorSections}} = LastObsevation,
   ResultNumber = length(PrevObsevations),
   {ok, {start, [ResultNumber], {missing, ErrorSections}}};
 prepareOutputResult(Observation_message, PrevObsevations) ->
   [FirstNumber, SecondNumber] = Observation_message,
-  [{sequence, _,{start, PossibleNumbers, {missing, ErrorSections}}} | _] = PrevObsevations,
-  CalculationResult = number:calculatePossibleNumbers(FirstNumber, SecondNumber, PossibleNumbers, ErrorSections),
+  io:format("Value ~p~n", [PrevObsevations]),
+  case PrevObsevations of
+  [] ->
+      CalculationResult = number:calculatePossibleNumbers(FirstNumber, SecondNumber, [], []);
+  [{start, PossibleNumbers, {missing, ErrorSections}} | _] ->
+      CalculationResult = number:calculatePossibleNumbers(FirstNumber, SecondNumber, PossibleNumbers, ErrorSections)
+  end,
   {start, ResultPossibleNumbers, {missing, NewErrorSections}} = CalculationResult,
   if
     length(ResultPossibleNumbers) > 0 ->
-      IncreaseNumber = length(PrevObsevations) - 1,
+      IncreaseNumber = length(PrevObsevations),
       ResultNumbers = [Number + IncreaseNumber || Number <- ResultPossibleNumbers],
       {ok, {start, ResultNumbers, {missing, NewErrorSections}}};
     length(ResultPossibleNumbers) < 1 ->
