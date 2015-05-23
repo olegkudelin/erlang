@@ -30,7 +30,7 @@ get_session(Pid) ->
 observation_add(Pid, Uuid, green, ObserveSections) ->
   call(Pid, {observation_add, {sequence, Uuid, color, green, numbers, ObserveSections}});
 observation_add(Pid, Uuid, red, []) ->
-  call(Pid, {observation_add, {sequence, Uuid, color, red}}).
+  call(Pid, {observation_add, {sequence, Uuid, color, red, numbers, []}}).
 
 show_all_sequence(Pid) ->
   call(Pid, show_all_sequence).
@@ -64,7 +64,7 @@ server(State) ->
       ?MODULE:server(dict:store(Uuid, [], State));
 
 
-		{{observation_add, {sequence, Uuid, color, green, numbers, Observation_message}}, From, Ref} ->
+		{{observation_add, {sequence, Uuid, color, Color, numbers, Observation_message}}, From, Ref} ->
       case dict:find(Uuid, State) of
         {ok, PrevObservations} ->
           io:format("Sequense fount ok ~p~n", [State]),
@@ -75,31 +75,18 @@ server(State) ->
               ?MODULE:server(State);
             {ok, CalculationResult} ->
               From ! {reply, Ref, Result},
-              ?MODULE:server(dict:store(Uuid, [CalculationResult | PrevObservations], State))
+              case Color of
+                green ->
+                  ?MODULE:server(dict:store(Uuid, [CalculationResult | PrevObservations], State));
+                red ->
+                  ?MODULE:server(dict:store(Uuid, [stop | PrevObservations], State))
+              end
           end;
         error ->
           io:format("Sequense found error ~p~n", [State]),
           From ! {reply, Ref, {error,{msg, "The sequence isn't found"}}},
           ?MODULE:server(State)
       end;
-
-    {{observation_add, {sequence, Uuid, color, red}}, From, Ref} ->
-      case dict:find(Uuid, State) of
-        {ok, PrevObservations} ->
-          Result = prepareOutputResult([], PrevObservations),
-          case Result of
-            {error, _} ->
-              From ! {reply, Ref, Result},
-              ?MODULE:server(State);
-            _ ->
-              From ! {reply, Ref, Result},
-              ?MODULE:server(dict:store(Uuid, [stop | PrevObservations], State))
-          end;
-        error ->
-          From ! {reply, Ref, {error, {msg, "The sequence isn't found"}}},
-          ?MODULE:server(State)
-      end;
-
 
     {show_all_sequence, From, Ref} ->
       From ! {reply, Ref, State},
