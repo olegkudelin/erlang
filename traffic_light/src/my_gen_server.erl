@@ -74,7 +74,10 @@ server(State) ->
               From ! {reply, Ref, Result},
               ?MODULE:server(State);
             {ok, CalculationResult} ->
-              From ! {reply, Ref, Result},
+              {start, ResultPossibleNumbers, {missing, NewErrorSections}} = CalculationResult,
+              IncreaseNumber = length(PrevObservations),
+              ResultNumbers = [Number + IncreaseNumber || Number <- ResultPossibleNumbers],
+              From ! {reply, Ref, {ok, {start, ResultNumbers, {missing, NewErrorSections}}}},
               case Color of
                 green ->
                   ?MODULE:server(dict:store(Uuid, [CalculationResult | PrevObservations], State));
@@ -124,9 +127,7 @@ prepareOutputResult(Observation_message, PrevObsevations) ->
   {start, ResultPossibleNumbers, {missing, NewErrorSections}} = CalculationResult,
   if
     length(ResultPossibleNumbers) > 0 ->
-      IncreaseNumber = length(PrevObsevations),
-      ResultNumbers = [Number + IncreaseNumber || Number <- ResultPossibleNumbers],
-      {ok, {start, ResultNumbers, {missing, NewErrorSections}}};
+      {ok, {start, ResultPossibleNumbers, {missing, NewErrorSections}}};
     length(ResultPossibleNumbers) < 1 ->
       {error,{msg, "Result not found. Error sequence?"}}
   end.

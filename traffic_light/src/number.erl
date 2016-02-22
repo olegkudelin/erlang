@@ -52,7 +52,7 @@ calculatePossibleNumbers(LeftSections, RigthSections, PrefResultNumbers, ErrorSe
   {start, filterByWaitigSeq(PossibleNumbers, Seq), {missing,  [LeftMissingSectionNew, RigthErrorSectionNew]}}.
 
 filterByWaitigSeq(PossibleNumbers, Seq) ->
-  [N1 || N1 <- PossibleNumbers, N2 <- Seq, N1 == N2].
+  [N1 || N1 <- PossibleNumbers, N2 <- Seq, N1 == N2, N1 > 0].
 
 filterNumbersWithPattern(NumbersWithPattern, Numbers) ->
   [{N, Shablon} || {N, Shablon} <- NumbersWithPattern, Number <- Numbers, N == Number ].
