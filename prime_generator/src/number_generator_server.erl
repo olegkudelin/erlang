@@ -36,31 +36,12 @@ stop() ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init(_Args) ->
-    {ok, #state{
-        last_time=none}
-    }.
+init(Args) ->
+    {ok, Args}.
 
 handle_call({start, MaxNumber}, _From, State) ->
-    CurrentTime = get_micro_sec_time(),
-    generate_number(MaxNumber),
-    continue(MaxNumber),
-    {reply, ok, State#state{last_time = CurrentTime + 333}};
-handle_call(stop, _From, State) ->
-    {reply, ok, State#state{last_time = none}}.
-
-handle_cast({continue, MaxNumber}, State) ->
-    CurrentTime = get_micro_sec_time(),
-    if
-        State#state.last_time =< CurrentTime ->
-            spawn(?MODULE, generate_number, [MaxNumber]),
-            continue(MaxNumber),
-            NewState = State#state{last_time = State#state.last_time + 333},
-            {noreply, NewState};
-        State#state.last_time > CurrentTime ->
-            continue(MaxNumber),
-            {noreply, State}
-    end;
+    high_resolution_timer:add_method(fun() -> spawn(?MODULE, generate_number, [MaxNumber]) end, 333),
+    {reply, ok, State}.
 
 handle_cast(continue, _) ->
     {reply, error, "Unexpected value"}.
@@ -74,13 +55,6 @@ code_change(_OldVsn, State, _Extra) ->
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
-
-get_micro_sec_time() ->
-    {_MegaSecs, Secs, MicroSecs} = os:timestamp(),
-    Secs * 1000000 + MicroSecs.
-
-continue(MaxNumber) ->
-    gen_server:cast(?MODULE, {continue, MaxNumber}).
 
 generate_number(MaxNumber) ->
     RandomNumber = random_generator:uniform(MaxNumber - 1),

@@ -68,7 +68,7 @@ handle_call(get_from_list, _From, State) ->
     {reply, eredis:q(State#params.redis, ["RPOP", State#params.queue_key]), State};
 
 handle_call(get_and_remove_range_from_list, _From, State) ->
-    {ok, Data} = eredis:q(State#params.redis, ["LRANGE", State#params.queue_key, 0, 1000]),
+    {ok, Data} = eredis:q(State#params.redis, ["LRANGE", State#params.queue_key, 0, 5000]),
     DataLength = erlang:length(Data),
     if
         DataLength > 0 ->

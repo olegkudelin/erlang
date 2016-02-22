@@ -35,5 +35,6 @@ init([]) ->
     RandomGenerator = ?CHILD(random_generator, worker),
     StorageServerGenerator = ?CHILD(storage_server_my, worker),
     StorageServerGenerator2 = ?CHILD(storage_server_my_2, worker),
-    {ok, { {one_for_one, 5, 10}, [Redis, StorageServerGenerator, StorageServerGenerator2, RandomGenerator, Prime, Generator]} }.
+    High_resolution_timer = ?CHILD(high_resolution_timer, worker),
+    {ok, { {one_for_one, 5, 10}, [Redis, High_resolution_timer, StorageServerGenerator, StorageServerGenerator2, RandomGenerator, Prime, Generator]} }.
 

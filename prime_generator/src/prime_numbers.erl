@@ -6,7 +6,7 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, run/1]).
+-export([start_link/0, check_numbers/0]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -27,13 +27,11 @@ start_link() ->
 %% ------------------------------------------------------------------
 
 init(Args) ->
-    find_number(),
+    high_resolution_timer:add_method(fun() -> spawn(?MODULE, check_numbers, []) end, 700000),
+%%    find_number(),
     {ok, Args}.
 
 handle_cast(find, State) ->
-    {Time, NumberList} = timer:tc(fun() -> storage_server_my_2:get_and_remove_range_from_list() end),
-    storage_server_my:put_in_list1(Time),
-    values(NumberList),
     {noreply, State}.
 
 terminate(_Reason, _State) ->
@@ -46,19 +44,13 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-find_number() ->
-    gen_server:cast(?MODULE, find).
 
-values({ok, []}) ->
-    timer:sleep(100),
-    find_number();
-
-values({ok, NumberList}) ->
-    spawn(?MODULE, run, [NumberList]),
-    find_number().
-
-run(List) ->
-    run_check(List).
+check_numbers() ->
+    {Time, {ok, NumberList}} = timer:tc(fun() -> storage_server_my_2:get_and_remove_range_from_list() end),
+%%    io:format("dfdfdf ~p~n", [Time]),
+%%    {ok, Srrr} = storage_server_my_2:get_from_list(),
+%%    storage_server_my:put_in_list1(Time),
+    run_check(NumberList).
 
 run_check([]) ->
     ok;
