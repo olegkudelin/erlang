@@ -1,0 +1,1 @@
+erl -pa ebin/ -pa deps/eredis/ebin/ -pa deps/sfmt/ebin/ -eval "application:start(eredis)" -eval "application:start(number_generator)"
