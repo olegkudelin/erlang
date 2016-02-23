@@ -1,10 +1,6 @@
--module(number_generator_server).
+-module(generator).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).
-
--record(state, {
-    last_time
-}).
 
 %% ------------------------------------------------------------------
 %% API Function Exports
@@ -36,8 +32,8 @@ stop() ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init(Args) ->
-    ReidsEntity = redis_connection_pull:get(),
+init(_Args) ->
+    ReidsEntity = redis_manager:get(),
     {ok, ReidsEntity}.
 
 handle_call({start, MaxNumber}, _From, State) ->
@@ -59,4 +55,4 @@ code_change(_OldVsn, State, _Extra) ->
 
 generate_number(MaxNumber, State) ->
     RandomNumber = random_generator:uniform(MaxNumber - 1),
-    redis_connection_pull:put_in_list(RandomNumber, State).
+    redis_manager:put_in_list(RandomNumber, State).

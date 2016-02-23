@@ -1,4 +1,4 @@
--module(redis_connection_pull).
+-module(redis_manager).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).
 

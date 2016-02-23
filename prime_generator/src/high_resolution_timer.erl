@@ -38,7 +38,7 @@ check_timer() ->
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
-init(Args) ->
+init(_Args) ->
     check_timer(),
     {ok, []}.
 
