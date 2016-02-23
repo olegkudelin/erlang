@@ -33,8 +33,6 @@ init([]) ->
     Prime = ?CHILD(prime_numbers, worker),
     Generator = ?CHILD(number_generator_server, worker),
     RandomGenerator = ?CHILD(random_generator, worker),
-    StorageServerGenerator = ?CHILD(storage_server_my, worker),
-    StorageServerGenerator2 = ?CHILD(storage_server_my_2, worker),
     High_resolution_timer = ?CHILD(high_resolution_timer, worker),
-    {ok, { {one_for_one, 5, 10}, [Redis, High_resolution_timer, StorageServerGenerator, StorageServerGenerator2, RandomGenerator, Prime, Generator]} }.
+    {ok, { {one_for_one, 5, 10}, [Redis, High_resolution_timer, RandomGenerator, Prime, Generator]} }.
 

@@ -10,7 +10,7 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, start/1, stop/0, generate_number/1]).
+-export([start_link/0, start/1, stop/0, generate_number/2]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -37,10 +37,11 @@ stop() ->
 %% ------------------------------------------------------------------
 
 init(Args) ->
-    {ok, Args}.
+    ReidsEntity = redis_connection_pull:get(),
+    {ok, ReidsEntity}.
 
 handle_call({start, MaxNumber}, _From, State) ->
-    high_resolution_timer:add_method(fun() -> spawn(?MODULE, generate_number, [MaxNumber]) end, 333),
+    high_resolution_timer:add_method(fun() -> spawn(?MODULE, generate_number, [MaxNumber, State]) end, 333),
     {reply, ok, State}.
 
 handle_cast(continue, _) ->
@@ -56,6 +57,6 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-generate_number(MaxNumber) ->
+generate_number(MaxNumber, State) ->
     RandomNumber = random_generator:uniform(MaxNumber - 1),
-    storage_server_my:put_in_list(RandomNumber).
+    redis_connection_pull:put_in_list(RandomNumber, State).
