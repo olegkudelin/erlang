@@ -33,7 +33,7 @@ init(Args) ->
     {ok, Args}.
 
 handle_call(MaxNumber, _From, State) ->
-    {reply, random:uniform(MaxNumber), State}.
+    {reply, random:uniform(MaxNumber - 1) + 1, State}.
 
 handle_cast(_Msg, State) ->
     {noreply, State}.

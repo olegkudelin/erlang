@@ -9,8 +9,8 @@
 %% Application callbacks
 %% ===================================================================
 
-start(_StartType, _StartArgs) ->
-    number_generator_sup:start_link().
+start(_StartType, MaxNumber) ->
+    number_generator_sup:start_link(MaxNumber).
 
 stop(_State) ->
     ok.

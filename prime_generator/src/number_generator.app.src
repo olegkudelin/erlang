@@ -8,7 +8,7 @@
                   stdlib,
                   eredis
                  ]},
-  {mod, { number_generator_app, []}},
+  {mod, { number_generator_app, [1000000000000]}},
   {env, [{redis_host, "localhost"},
           {redis_port, 7004},
           {redis_password, "redis-cache-1"},
