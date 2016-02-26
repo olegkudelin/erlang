@@ -23,7 +23,7 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, get/0, get_from_list/1, get_and_remove_range_from_list/1, put_in_set/2, put_in_list/2, put_in_list1/2, clear_list/1]).
+-export([start_link/0, get/0, get_from_list/1, get_and_remove_range_from_list/1, put_in_set/2, put_in_list/2, clear_list/1]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -82,9 +82,6 @@ put_in_set(Number, RedisConnection) ->
 put_in_list(Number, RedisConnection) ->
     eredis:q(RedisConnection#state_entity.redis_pid, ["RPUSH", RedisConnection#state_entity.redis_data#redis_data.queue_key, Number]).
 
-put_in_list1(Number, RedisConnection) ->
-    eredis:q(RedisConnection#state_entity.redis_pid, ["RPUSH", "fffff", Number]).
-
 clear_list(RedisConnection) ->
     eredis:q(RedisConnection#state_entity.redis_pid, ["DEL", RedisConnection#state_entity.redis_data#redis_data.queue_key]).
 
@@ -95,12 +92,12 @@ clear_list(RedisConnection) ->
 %% ------------------------------------------------------------------
 
 init(Args) ->
-    RedisList = build_redis_list(Args, [], 5),
+    RedisList = build_redis_list(Args, fifo:new(), 5),
     {ok, RedisList}.
 
 handle_call(get, _From, State) ->
-    [Redis | RedisList] = State,
-    {reply, Redis, lists:append(RedisList, [Redis])}.
+    {Redis, NewState} = fifo:next(State),
+    {reply, Redis, NewState}.
 
 terminate(_Reason, _State) ->
     ok.
@@ -112,13 +109,13 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-build_redis_list(_RedisConnection, List, 0) ->
-    List;
-build_redis_list(Args, List, ElementCount) when ElementCount > 0 ->
+build_redis_list(_RedisConnection, Fifo, 0) ->
+    Fifo;
+build_redis_list(Args, Fifo, ElementCount) when ElementCount > 0 ->
     {redis_connection, RedisConnectionTuple, redis_data, RedisData} = Args,
     CreateRedisConnection = create_redis_connection(RedisConnectionTuple),
     StateEntity = #state_entity{redis_pid = CreateRedisConnection, redis_data = RedisData},
-    build_redis_list(Args, [StateEntity | List], ElementCount - 1).
+    build_redis_list(Args, fifo:push(Fifo, StateEntity), ElementCount - 1).
 
 create_redis_connection(Args) ->
     {ok, Redis} = eredis:start_link(Args#redis_connection.host, Args#redis_connection.port, Args#redis_connection.db, Args#redis_connection.password),

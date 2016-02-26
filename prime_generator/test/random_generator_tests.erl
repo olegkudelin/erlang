@@ -31,8 +31,8 @@ server_is_alive(Pid) ->
 
 random_number() ->
   ?assert(random_generator:uniform(20) < 20),
-  ?assert(random_generator:uniform(2) == 2),
-  ?assert(random_generator:uniform(2) == 2).
+  ?assertEqual(random_generator:uniform(2), 2),
+  ?assertEqual(random_generator:uniform(2), 2).
 
 cleanup(Pid) ->
   exit(Pid, kill), %% brutal kill!
