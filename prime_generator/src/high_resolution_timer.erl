@@ -18,8 +18,7 @@
 %% gen_server Function Exports
 %% ------------------------------------------------------------------
 
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+-export([init/1, handle_call/3, handle_cast/2, terminate/2, code_change/3]).
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
@@ -46,9 +45,6 @@ handle_cast(check_timer, State) ->
     NewState = check_timer(State),
     loop(),
     {noreply, NewState}.
-
-handle_info(_Info, State) ->
-    {noreply, State}.
 
 terminate(_Reason, _State) ->
     ok.
