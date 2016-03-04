@@ -40,19 +40,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-
 check_numbers(RedisEntity) ->
-    {ok, NumberList} = redis_manager:get_and_remove_range_from_list(RedisEntity),
-    check_and_save_numbers(NumberList, RedisEntity).
-
-check_and_save_numbers([], _RedisEntity) ->
-    ok;
-check_and_save_numbers([Number| NumberList], RedisEntity) ->
-    IntNumber = binary_to_integer(Number),
-    save_number({prime:is_prime(IntNumber), IntNumber}, RedisEntity),
-    check_and_save_numbers(NumberList, RedisEntity).
-
-save_number({true, Number}, RedisEntity) ->
-    redis_manager:put_in_set(Number, RedisEntity);
-save_number({false, _Number}, _RedisEntity) ->
-    ok.
+    {ok, BinaryNumberList} = redis_manager:get_and_remove_range_from_list(RedisEntity),
+    PrimeNumberList = [binary_to_integer(N) || N <- BinaryNumberList, prime:is_prime(binary_to_integer(N))],
+    redis_manager:put_in_set(PrimeNumberList, RedisEntity).

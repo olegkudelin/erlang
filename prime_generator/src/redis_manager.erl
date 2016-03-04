@@ -76,8 +76,12 @@ get_and_remove_range_from_list(RedisConnection) ->
     end,
     {ok, Data}.
 
+put_in_set(Numbers, RedisConnection) when is_list(Numbers) ->
+    ParameterList = ["SADD" | [RedisConnection#state_entity.redis_data#redis_data.result_set_key | Numbers]],
+    eredis:q(RedisConnection#state_entity.redis_pid, ParameterList);
 put_in_set(Number, RedisConnection) ->
     eredis:q(RedisConnection#state_entity.redis_pid, ["SADD", RedisConnection#state_entity.redis_data#redis_data.result_set_key, Number]).
+
 
 put_in_list(Number, RedisConnection) ->
     eredis:q(RedisConnection#state_entity.redis_pid, ["RPUSH", RedisConnection#state_entity.redis_data#redis_data.queue_key, Number]).
@@ -113,8 +117,9 @@ build_redis_list(_RedisConnection, Fifo, 0) ->
     Fifo;
 build_redis_list(Args, Fifo, ElementCount) when ElementCount > 0 ->
     {redis_connection, RedisConnectionTuple, redis_data, RedisData} = Args,
-    CreateRedisConnection = create_redis_connection(RedisConnectionTuple),
-    StateEntity = #state_entity{redis_pid = CreateRedisConnection, redis_data = RedisData},
+    StateEntity = #state_entity{
+        redis_pid = create_redis_connection(RedisConnectionTuple),
+        redis_data = RedisData},
     build_redis_list(Args, fifo:push(Fifo, StateEntity), ElementCount - 1).
 
 create_redis_connection(Args) ->
