@@ -1,3 +1,4 @@
+%%  Считывает массив чисел из списка, отбирает простые и сохраняет в неповторяющееся множество
 -module(filtering).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).

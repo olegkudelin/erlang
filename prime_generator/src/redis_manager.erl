@@ -1,3 +1,5 @@
+%% Реализует все взаимодействие с редис
+
 -module(redis_manager).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).

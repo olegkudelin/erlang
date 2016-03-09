@@ -4,7 +4,7 @@
 %% API
 -export([new/0, push/2, next/1, empty/1]).
 
-%% implemented as two stacks; push on the first, pop on the second.
+%% implemented as two stacks; push on the first, get on the second.
 %% when the second is empty, reverse the first and make it the second.
 new() -> {fifo, [], []}.
 

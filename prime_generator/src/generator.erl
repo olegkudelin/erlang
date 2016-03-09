@@ -1,3 +1,4 @@
+%% Берет случайные числа и сохраняет в список
 -module(generator).
 -behaviour(gen_server).
 -define(SERVER, ?MODULE).
