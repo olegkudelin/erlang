@@ -14,14 +14,16 @@
 Диапазон чисел, название структур для хранения данных и параметры для подсоединения к редис хранятся в src/number_generator.app.src
 
 Пример:
-  {mod, { number_generator_app, [1000000000000]}},
-  {env, [{redis_host, "localhost"},
+
+    {mod, { number_generator_app, [1000000000000]}},
+    {env, [{redis_host, "localhost"},
           {redis_port, 7004},
           {redis_password, "password"},
           {redis_db, 0},
           {queue_key, "number_list"},
           {result_set_key, "number_set"}
         ]}
+
 где
 1000000000000 - верхний диапазн
 localhost - хост, на которм запущен редис
