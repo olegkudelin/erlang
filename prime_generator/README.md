@@ -5,8 +5,8 @@
 ## run
 
     cd prime_generator
-    ./rebar deps
-    ./rebar compile
+    rebar g-d
+    rebar co
     ./run
 
 ## Настройка
