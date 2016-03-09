@@ -41,6 +41,6 @@ code_change(_OldVsn, State, _Extra) ->
 %% ------------------------------------------------------------------
 
 check_numbers(RedisEntity) ->
-    {ok, BinaryNumberList} = redis_manager:get_and_remove_range_from_list(RedisEntity),
+    {ok, BinaryNumberList} = redis_manager:pop_from_list(5000, RedisEntity),
     PrimeNumberList = [binary_to_integer(N) || N <- BinaryNumberList, prime:is_prime(binary_to_integer(N))],
     redis_manager:put_in_set(PrimeNumberList, RedisEntity).

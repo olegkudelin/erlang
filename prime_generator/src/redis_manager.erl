@@ -3,27 +3,27 @@
 -define(SERVER, ?MODULE).
 
 
--record(redis_connection, {
+-record(connection_params, {
     host,
     port,
     db,
     password
 }).
 
--record(redis_data, {
+-record(structures_names, {
     queue_key,
     result_set_key
 }).
 
--record(state_entity, {
+-record(redis_entity, {
     redis_pid,
-    redis_data
+    structures_names
 }).
 %% ------------------------------------------------------------------
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0, get/0, get_from_list/1, get_and_remove_range_from_list/1, put_in_set/2, put_in_list/2, clear_list/1]).
+-export([start_link/0, get/0, pop_from_list/1, pop_from_list/2, put_in_set/2, put_in_list/2, clear_list/1]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -50,44 +50,42 @@ start_link(Host, Port, DB) ->
     start_link(Host, Port, DB, Password).
 
 start_link(Host, Port, DB, Password) ->
-    RedisConnectionTuple = #redis_connection{
+    RedisConnectionTuple = #connection_params{
         host = Host,
         port = Port,
         db = DB,
         password = Password
     },
-    RedisData = get_redis_data(),
-gen_server:start_link({local, ?MODULE}, ?MODULE, {redis_connection, RedisConnectionTuple, redis_data, RedisData}, []).
+    RedisData = get_structures_names(),
+gen_server:start_link({local, ?MODULE}, ?MODULE, {redis_connection, RedisConnectionTuple, structures_names, RedisData}, []).
 
 get() ->
     gen_server:call(?MODULE, get).
 
 
-get_from_list(RedisConnection) ->
-    eredis:q(RedisConnection#state_entity.redis_pid, ["RPOP", RedisConnection#state_entity.redis_data#redis_data.queue_key]).
+pop_from_list(StateEntity) ->
+    eredis:q(StateEntity#redis_entity.redis_pid, ["RPOP", StateEntity#redis_entity.structures_names#structures_names.queue_key]).
 
-get_and_remove_range_from_list(RedisConnection) ->
-    {ok, Data} = eredis:q(RedisConnection#state_entity.redis_pid, ["LRANGE", RedisConnection#state_entity.redis_data#redis_data.queue_key, 0, 5000]),
-    DataLength = erlang:length(Data),
-    if
-        DataLength > 0 ->
-            {ok,<<"OK">>} = eredis:q(RedisConnection#state_entity.redis_pid, ["LTRIM", RedisConnection#state_entity.redis_data#redis_data.queue_key, DataLength, -1]);
-        true -> ok
-    end,
+pop_from_list(Count, RedisConnection) when Count > 0 ->
+    {ok, Data} = eredis:q(RedisConnection#redis_entity.redis_pid, ["LRANGE", RedisConnection#redis_entity.structures_names#structures_names.queue_key, 0, Count]),
+    {ok, <<"OK">>} = remove_from_list(erlang:length(Data), RedisConnection),
     {ok, Data}.
 
-put_in_set(Numbers, RedisConnection) when is_list(Numbers) ->
-    ParameterList = ["SADD" | [RedisConnection#state_entity.redis_data#redis_data.result_set_key | Numbers]],
-    eredis:q(RedisConnection#state_entity.redis_pid, ParameterList);
+remove_from_list(Count, RedisConnection) ->
+    eredis:q(RedisConnection#redis_entity.redis_pid, ["LTRIM", RedisConnection#redis_entity.structures_names#structures_names.queue_key, Count, -1]).
+
+put_in_set(Numbers, StateEntity) when is_list(Numbers) ->
+    ParameterList = ["SADD" | [StateEntity#redis_entity.structures_names#structures_names.result_set_key | Numbers]],
+    eredis:q(StateEntity#redis_entity.redis_pid, ParameterList);
 put_in_set(Number, RedisConnection) ->
-    eredis:q(RedisConnection#state_entity.redis_pid, ["SADD", RedisConnection#state_entity.redis_data#redis_data.result_set_key, Number]).
+    eredis:q(RedisConnection#redis_entity.redis_pid, ["SADD", RedisConnection#redis_entity.structures_names#structures_names.result_set_key, Number]).
 
 
-put_in_list(Number, RedisConnection) ->
-    eredis:q(RedisConnection#state_entity.redis_pid, ["RPUSH", RedisConnection#state_entity.redis_data#redis_data.queue_key, Number]).
+put_in_list(Number, StateEntity) ->
+    eredis:q(StateEntity#redis_entity.redis_pid, ["RPUSH", StateEntity#redis_entity.structures_names#structures_names.queue_key, Number]).
 
-clear_list(RedisConnection) ->
-    eredis:q(RedisConnection#state_entity.redis_pid, ["DEL", RedisConnection#state_entity.redis_data#redis_data.queue_key]).
+clear_list(StateEntity) ->
+    eredis:q(StateEntity#redis_entity.redis_pid, ["DEL", StateEntity#redis_entity.structures_names#structures_names.queue_key]).
 
 
 
@@ -116,20 +114,20 @@ code_change(_OldVsn, State, _Extra) ->
 build_redis_list(_RedisConnection, Fifo, 0) ->
     Fifo;
 build_redis_list(Args, Fifo, ElementCount) when ElementCount > 0 ->
-    {redis_connection, RedisConnectionTuple, redis_data, RedisData} = Args,
-    StateEntity = #state_entity{
+    {redis_connection, RedisConnectionTuple, structures_names, RedisData} = Args,
+    StateEntity = #redis_entity{
         redis_pid = create_redis_connection(RedisConnectionTuple),
-        redis_data = RedisData},
+        structures_names = RedisData},
     build_redis_list(Args, fifo:push(Fifo, StateEntity), ElementCount - 1).
 
 create_redis_connection(Args) ->
-    {ok, Redis} = eredis:start_link(Args#redis_connection.host, Args#redis_connection.port, Args#redis_connection.db, Args#redis_connection.password),
+    {ok, Redis} = eredis:start_link(Args#connection_params.host, Args#connection_params.port, Args#connection_params.db, Args#connection_params.password),
     Redis.
 
-get_redis_data() ->
+get_structures_names() ->
     {ok, QueueKey} = application:get_env(queue_key),
     {ok, ResultSetKey} = application:get_env(result_set_key),
-    RedisData = #redis_data{
+    RedisData = #structures_names{
         queue_key = QueueKey,
         result_set_key = ResultSetKey},
     RedisData.
